@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ApiError, searchLabelsByBrand } from '../api/client'
 import { toMedicines } from '../api/medicine'
 import type { Medicine } from '../api/medicine'
@@ -17,8 +17,9 @@ const IDLE_STATE: SearchState = {
   error: null,
 }
 
-export function useMedicineSearch(query: string): SearchState {
+export function useMedicineSearch(query: string) {
   const [state, setState] = useState<SearchState>(IDLE_STATE)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     const term = query.trim()
@@ -60,7 +61,11 @@ export function useMedicineSearch(query: string): SearchState {
     return () => {
       active = false
     }
-  }, [query])
+  }, [query, attempt])
 
-  return state
+  const retry = useCallback(() => {
+    setAttempt((current) => current + 1)
+  }, [])
+
+  return { state, retry }
 }

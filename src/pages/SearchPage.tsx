@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { List, Stack, Text, Title } from '@mantine/core'
+import { Chip, Group, Stack, Text, Title } from '@mantine/core'
 import SearchBar from '../components/SearchBar'
+import SearchResults from '../components/SearchResults'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useMedicineSearch } from '../hooks/useMedicineSearch'
+
+const EXAMPLES = ['Advil', 'Tylenol', 'Zyrtec', 'Benadryl']
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [term, setTerm] = useState(() => searchParams.get('q') ?? '')
   const debouncedTerm = useDebouncedValue(term, 400)
-  const { status, medicines, error } = useMedicineSearch(debouncedTerm)
+  const { state, retry } = useMedicineSearch(debouncedTerm)
 
   useEffect(() => {
     const current = searchParams.get('q') ?? ''
@@ -40,22 +43,34 @@ export default function SearchPage() {
 
       <SearchBar
         value={term}
-        busy={status === 'loading'}
+        busy={state.status === 'loading'}
         onChange={setTerm}
       />
 
-      {status === 'error' && <Text c="red">{error}</Text>}
-
-      {status === 'success' && medicines.length === 0 && (
-        <Text c="dimmed">No results found for "{debouncedTerm}".</Text>
-      )}
-
-      {status === 'success' && medicines.length > 0 && (
-        <List>
-          {medicines.map((medicine) => (
-            <List.Item key={medicine.id}>{medicine.brandName}</List.Item>
-          ))}
-        </List>
+      {state.status === 'idle' ? (
+        <Stack gap="xs">
+          <Text size="sm" c="dimmed">
+            Try one of these
+          </Text>
+          <Group gap="xs">
+            {EXAMPLES.map((example) => (
+              <Chip
+                key={example}
+                checked={false}
+                variant="outline"
+                onClick={() => setTerm(example)}
+              >
+                {example}
+              </Chip>
+            ))}
+          </Group>
+        </Stack>
+      ) : (
+        <SearchResults
+          state={state}
+          query={debouncedTerm.trim()}
+          onRetry={retry}
+        />
       )}
     </Stack>
   )
