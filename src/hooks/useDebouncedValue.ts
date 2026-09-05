@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-export function useDebouncedValue<T>(value: T, delay = 400): T {
+export function useDebouncedValue<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = useState(value)
+  const latest = useRef(value)
+
+  latest.current = value
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(value), delay)
@@ -9,5 +12,9 @@ export function useDebouncedValue<T>(value: T, delay = 400): T {
     return () => window.clearTimeout(timer)
   }, [value, delay])
 
-  return debounced
+  const flush = useCallback(() => {
+    setDebounced(latest.current)
+  }, [])
+
+  return [debounced, flush] as const
 }

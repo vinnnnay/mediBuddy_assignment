@@ -1,5 +1,13 @@
 import { memo } from 'react'
-import { Button, Card, SimpleGrid, Skeleton, Stack, Text } from '@mantine/core'
+import {
+  Alert,
+  Button,
+  Card,
+  SimpleGrid,
+  Skeleton,
+  Stack,
+  Text,
+} from '@mantine/core'
 import type { Medicine } from '../api/medicine'
 import type { SearchState } from '../hooks/useMedicineSearch'
 import MedicineCard from './MedicineCard'
@@ -65,21 +73,41 @@ function SearchResults({ state, query, onRetry }: SearchResultsProps) {
     return (
       <StateMessage
         title="No results found"
-        description={`We could not find any medicine with the brand name "${query}". Check the spelling or try a different brand.`}
+        description={`Nothing matched "${query}" as a brand name or a generic name. Check the spelling, or try the US name for it, for example acetaminophen rather than paracetamol.`}
       />
     )
   }
 
+  const shown = state.medicines.length
+  const countLabel =
+    state.total > shown
+      ? `Showing ${shown} of ${state.total} results for "${query}"`
+      : `${shown} ${shown === 1 ? 'result' : 'results'} for "${query}"`
+
   return (
     <Stack gap="sm">
-      <Text size="sm" c="dimmed">
-        {state.medicines.length} {state.medicines.length === 1 ? 'result' : 'results'} for "{query}"
+      <Text size="sm" c="dimmed" role="status" aria-live="polite">
+        {countLabel}
       </Text>
+
+      {state.matchedOn === 'generic' && (
+        <Alert color="teal" variant="light" title="No brand name matched">
+          Nothing is sold under the name "{query}", so these are products that
+          contain it as an ingredient.
+        </Alert>
+      )}
+
       <ResultsGrid>
         {state.medicines.map((medicine: Medicine) => (
           <MedicineCard key={medicine.id} medicine={medicine} query={query} />
         ))}
       </ResultsGrid>
+
+      {state.disclaimer && (
+        <Text size="xs" c="dimmed" mt="xs">
+          {state.disclaimer}
+        </Text>
+      )}
     </Stack>
   )
 }

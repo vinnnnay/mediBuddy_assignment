@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, isAbortError, searchLabelsByBrand } from '../api/client'
+import { ApiError, isAbortError, searchMedicines } from '../api/client'
+import type { MatchedField } from '../api/client'
 import { toMedicines } from '../api/medicine'
 import type { Medicine } from '../api/medicine'
 import { createLruCache } from '../lib/lruCache'
@@ -9,16 +10,24 @@ export type SearchStatus = 'idle' | 'loading' | 'success' | 'error'
 export type SearchState = {
   status: SearchStatus
   medicines: Medicine[]
+  total: number
+  matchedOn: MatchedField
+  disclaimer: string | null
   error: string | null
 }
 
 const IDLE_STATE: SearchState = {
   status: 'idle',
   medicines: [],
+  total: 0,
+  matchedOn: 'brand',
+  disclaimer: null,
   error: null,
 }
 
-const cache = createLruCache<Medicine[]>(30)
+type CachedSearch = Omit<SearchState, 'status' | 'error'>
+
+const cache = createLruCache<CachedSearch>(30)
 
 function cacheKey(term: string): string {
   return term.toLowerCase()
@@ -39,25 +48,30 @@ export function useMedicineSearch(query: string) {
     const cached = cache.get(cacheKey(term))
 
     if (cached) {
-      setState({ status: 'success', medicines: cached, error: null })
+      setState({ ...cached, status: 'success', error: null })
       return
     }
 
     const controller = new AbortController()
 
-    setState({ status: 'loading', medicines: [], error: null })
+    setState({ ...IDLE_STATE, status: 'loading' })
 
-    searchLabelsByBrand(term, controller.signal)
-      .then((labels) => {
-        const medicines = toMedicines(labels)
+    searchMedicines(term, controller.signal)
+      .then((outcome) => {
+        const result: CachedSearch = {
+          medicines: toMedicines(outcome.labels),
+          total: outcome.total,
+          matchedOn: outcome.matchedOn,
+          disclaimer: outcome.disclaimer,
+        }
 
-        cache.set(cacheKey(term), medicines)
+        cache.set(cacheKey(term), result)
 
         if (controller.signal.aborted) {
           return
         }
 
-        setState({ status: 'success', medicines, error: null })
+        setState({ ...result, status: 'success', error: null })
       })
       .catch((error: unknown) => {
         if (isAbortError(error) || controller.signal.aborted) {
@@ -65,8 +79,8 @@ export function useMedicineSearch(query: string) {
         }
 
         setState({
+          ...IDLE_STATE,
           status: 'error',
-          medicines: [],
           error:
             error instanceof ApiError
               ? error.message

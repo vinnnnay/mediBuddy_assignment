@@ -11,7 +11,7 @@ const EXAMPLES = ['Advil', 'Tylenol', 'Zyrtec', 'Benadryl']
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [term, setTerm] = useState(() => searchParams.get('q') ?? '')
-  const debouncedTerm = useDebouncedValue(term, 400)
+  const [debouncedTerm, flushSearch] = useDebouncedValue(term, 400)
   const { state, retry } = useMedicineSearch(debouncedTerm)
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function SearchPage() {
       <Stack gap={6}>
         <Title order={2}>Search medicines</Title>
         <Text c="dimmed">
-          Look up a brand name to see its label information from the FDA.
+          Look up a medicine to see its label information from the FDA.
         </Text>
       </Stack>
 
@@ -45,6 +45,7 @@ export default function SearchPage() {
         value={term}
         busy={state.status === 'loading'}
         onChange={setTerm}
+        onSubmit={flushSearch}
       />
 
       {state.status === 'idle' ? (

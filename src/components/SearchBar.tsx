@@ -4,6 +4,7 @@ type SearchBarProps = {
   value: string
   busy: boolean
   onChange: (value: string) => void
+  onSubmit: () => void
 }
 
 function SearchIcon() {
@@ -23,16 +24,35 @@ function SearchIcon() {
   )
 }
 
-export default function SearchBar({ value, busy, onChange }: SearchBarProps) {
+export default function SearchBar({
+  value,
+  busy,
+  onChange,
+  onSubmit,
+}: SearchBarProps) {
   return (
     <TextInput
       size="md"
       type="search"
       value={value}
-      placeholder="Search by brand name, e.g. Advil"
+      placeholder="Search by brand or generic name"
       aria-label="Search medicines by brand name"
       autoComplete="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      enterKeyHint="search"
       onChange={(event) => onChange(event.currentTarget.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+          onSubmit()
+        }
+
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          onChange('')
+        }
+      }}
       leftSection={<SearchIcon />}
       rightSection={
         busy ? (

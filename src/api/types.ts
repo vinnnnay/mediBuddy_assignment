@@ -45,6 +45,8 @@ export type DrugLabel = {
 
 export type DrugLabelResponse = {
   meta?: {
+    disclaimer?: string
+    last_updated?: string
     results?: {
       skip: number
       limit: number

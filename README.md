@@ -1,7 +1,8 @@
 # MediSearch
 
 A medicine search app built on the openFDA Drug Label API. Search by brand name, scan the
-results, and open any product to read its label.
+results, and open any product to read its label. Enter runs the search immediately instead of
+waiting for the debounce, Escape clears it.
 
 Live: _add your Vercel URL here_
 
@@ -121,14 +122,16 @@ state with a way back, not an error.
 
 ## Trade-offs
 
-**Search is brand name only.** That is what the brief specified, but it means typing a generic
-name like "ibuprofen" returns nothing. The obvious fix is to retry against
-`openfda.generic_name` when the brand search comes back empty.
+**Search is brand name first.** That is what the brief specified. If the brand search comes
+back empty the app retries against `openfda.generic_name` and says so above the results, which
+costs one extra request only on the path that would otherwise be a dead end. It fires less
+often than you would expect: most generic names are also registered brand names, so
+`brand_name:"ibuprofen"` already returns over a thousand labels on its own.
 
-**Only the first 20 results.** `meta.results.total` reports 39 labels for Advil and the app
-shows 20 of them without saying so. Pagination via `&skip=` is straightforward, but it needs
-the cache key to include the offset and the offset reset on every query change, and getting
-that subtly wrong is worse than not having it.
+**Only the first 20 results.** The app now says "Showing 20 of 111" using `meta.results.total`,
+but there is no way to see the rest. Pagination via `&skip=` is straightforward, except that
+the cache key has to include the offset and the offset has to reset on every query change, and
+getting that subtly wrong is worse than not having it.
 
 **No tests.** With more time the two worth writing are that a slow response never overwrites a
 newer one, and that a 404 renders empty rather than error. Both are logic a reader currently
@@ -142,8 +145,19 @@ the time here.
 behave, which is why it is there. It also puts a health-adjacent term in browser history. For
 a real product that is a decision worth making deliberately rather than by default.
 
+## Scroll position
+
+Navigating forward scrolls to the top. Going back restores where you were, which matters here
+because the cache brings the results back instantly and it would be odd to land at the top of
+a list you had scrolled halfway down.
+
+The awkward part is that on back, the results render from a `useEffect`, so at the moment the
+restore runs the page is still short and `scrollTo` clamps. The restore retries on animation
+frames until the page is tall enough or it gives up. Scroll positions are also recorded with a
+guard that ignores events fired while the document is shrinking, because tearing down the
+results grid makes the browser clamp the scroll position and report it as a scroll.
+
 ## Next
 
-Generic name fallback, then "other products containing this ingredient" on the detail page
-(`openfda.unii` is already normalised, so it is one more query), then result counts and the
-openFDA disclaimer, which both arrive in `meta` on every response and are currently discarded.
+Pagination, filters on route and product type, and a brand name typeahead built on openFDA's
+`count=openfda.brand_name.exact`, which returns ranked distinct brand names.

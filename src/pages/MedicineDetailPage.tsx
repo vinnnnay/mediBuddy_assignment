@@ -15,7 +15,9 @@ import {
 } from '@mantine/core'
 import StateMessage from '../components/StateMessage'
 import MedicineFacts from '../components/MedicineFacts'
+import RelatedMedicines from '../components/RelatedMedicines'
 import { useMedicineDetail } from '../hooks/useMedicineDetail'
+import { useRelatedMedicines } from '../hooks/useRelatedMedicines'
 import { toTitleCase } from '../lib/format'
 
 function DetailSkeleton() {
@@ -40,6 +42,8 @@ export default function MedicineDetailPage() {
   const { state, retry } = useMedicineDetail(id)
 
   const brandName = state.medicine?.brandName
+  const substance = state.medicine?.substances[0]
+  const related = useRelatedMedicines(state.medicine?.id, state.medicine?.unii[0])
 
   useEffect(() => {
     document.title = brandName ? `${brandName} - MediSearch` : 'MediSearch'
@@ -147,6 +151,16 @@ export default function MedicineDetailPage() {
                 ))}
               </Accordion>
             </Stack>
+          )}
+
+          {substance && (
+            <RelatedMedicines substance={substance} medicines={related} />
+          )}
+
+          {state.disclaimer && (
+            <Text size="xs" c="dimmed">
+              {state.disclaimer}
+            </Text>
           )}
         </Stack>
       )}

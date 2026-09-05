@@ -1,18 +1,14 @@
-import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Box, Container, Group, Text } from '@mantine/core'
+import { Link } from 'react-router-dom'
+import { Anchor, Box, Container, Group, Text } from '@mantine/core'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 type LayoutProps = {
   children: ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { pathname } = useLocation()
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+  useScrollRestoration()
 
   return (
     <Box mih="100vh">
@@ -50,6 +46,21 @@ export default function Layout({ children }: LayoutProps) {
 
       <Container size="md" py="xl">
         {children}
+      </Container>
+
+      <Container size="md" pb="xl">
+        <Text size="xs" c="dimmed">
+          Data from the{' '}
+          <Anchor
+            href="https://open.fda.gov/apis/drug/label/"
+            target="_blank"
+            rel="noreferrer"
+            size="xs"
+          >
+            openFDA Drug Label API
+          </Anchor>
+          . Not medical advice.
+        </Text>
       </Container>
     </Box>
   )

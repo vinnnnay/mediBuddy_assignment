@@ -9,16 +9,23 @@ export type DetailStatus = 'loading' | 'success' | 'missing' | 'error'
 export type DetailState = {
   status: DetailStatus
   medicine: MedicineDetail | null
+  disclaimer: string | null
   error: string | null
 }
 
 const LOADING_STATE: DetailState = {
   status: 'loading',
   medicine: null,
+  disclaimer: null,
   error: null,
 }
 
-const cache = createLruCache<MedicineDetail | null>(20)
+type CachedDetail = {
+  medicine: MedicineDetail | null
+  disclaimer: string | null
+}
+
+const cache = createLruCache<CachedDetail>(20)
 
 export function useMedicineDetail(id: string | undefined) {
   const [state, setState] = useState<DetailState>(LOADING_STATE)
@@ -26,16 +33,17 @@ export function useMedicineDetail(id: string | undefined) {
 
   useEffect(() => {
     if (!id) {
-      setState({ status: 'missing', medicine: null, error: null })
+      setState({ ...LOADING_STATE, status: 'missing' })
       return
     }
 
-    if (cache.has(id)) {
-      const cached = cache.get(id) ?? null
+    const cached = cache.get(id)
 
+    if (cached) {
       setState({
-        status: cached ? 'success' : 'missing',
-        medicine: cached,
+        status: cached.medicine ? 'success' : 'missing',
+        medicine: cached.medicine,
+        disclaimer: cached.disclaimer,
         error: null,
       })
       return
@@ -46,18 +54,23 @@ export function useMedicineDetail(id: string | undefined) {
     setState(LOADING_STATE)
 
     fetchLabelById(id, controller.signal)
-      .then((label) => {
-        const medicine = label ? toMedicineDetail(label) : null
+      .then((page) => {
+        const label = page.labels[0]
+        const result: CachedDetail = {
+          medicine: label ? toMedicineDetail(label) : null,
+          disclaimer: page.disclaimer,
+        }
 
-        cache.set(id, medicine)
+        cache.set(id, result)
 
         if (controller.signal.aborted) {
           return
         }
 
         setState({
-          status: medicine ? 'success' : 'missing',
-          medicine,
+          status: result.medicine ? 'success' : 'missing',
+          medicine: result.medicine,
+          disclaimer: result.disclaimer,
           error: null,
         })
       })
@@ -67,8 +80,8 @@ export function useMedicineDetail(id: string | undefined) {
         }
 
         setState({
+          ...LOADING_STATE,
           status: 'error',
-          medicine: null,
           error:
             error instanceof ApiError
               ? error.message

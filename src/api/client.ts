@@ -19,6 +19,20 @@ export function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
 
+export type LabelPage = {
+  labels: DrugLabel[]
+  total: number
+  disclaimer: string | null
+}
+
+export type MatchedField = 'brand' | 'generic'
+
+export type SearchOutcome = LabelPage & {
+  matchedOn: MatchedField
+}
+
+const EMPTY_PAGE: LabelPage = { labels: [], total: 0, disclaimer: null }
+
 function buildSearchTerm(query: string): string {
   return query.replace(/["\\]/g, ' ').trim().replace(/\s+/g, ' ')
 }
@@ -26,7 +40,7 @@ function buildSearchTerm(query: string): string {
 async function requestLabels(
   search: string,
   signal?: AbortSignal,
-): Promise<DrugLabel[]> {
+): Promise<LabelPage> {
   const params = new URLSearchParams({
     search,
     limit: String(RESULT_LIMIT),
@@ -52,7 +66,7 @@ async function requestLabels(
       .catch(() => null)) as FdaErrorResponse | null
 
     if (body?.error?.code === 'NOT_FOUND') {
-      return []
+      return EMPTY_PAGE
     }
 
     throw new ApiError('server', 'The FDA service could not handle that request.')
@@ -73,34 +87,63 @@ async function requestLabels(
   }
 
   const body = (await response.json()) as DrugLabelResponse
+  const labels = body.results ?? []
 
-  return body.results ?? []
+  return {
+    labels,
+    total: body.meta?.results?.total ?? labels.length,
+    disclaimer: body.meta?.disclaimer ?? null,
+  }
 }
 
-export function searchLabelsByBrand(
+export async function searchMedicines(
   query: string,
   signal?: AbortSignal,
-): Promise<DrugLabel[]> {
+): Promise<SearchOutcome> {
   const term = buildSearchTerm(query)
 
   if (!term) {
-    return Promise.resolve([])
+    return { ...EMPTY_PAGE, matchedOn: 'brand' }
   }
 
-  return requestLabels(`openfda.brand_name:"${term}"`, signal)
+  const byBrand = await requestLabels(`openfda.brand_name:"${term}"`, signal)
+
+  if (byBrand.labels.length > 0) {
+    return { ...byBrand, matchedOn: 'brand' }
+  }
+
+  const byGeneric = await requestLabels(`openfda.generic_name:"${term}"`, signal)
+
+  return {
+    ...byGeneric,
+    matchedOn: byGeneric.labels.length > 0 ? 'generic' : 'brand',
+  }
 }
 
 export async function fetchLabelById(
   id: string,
   signal?: AbortSignal,
-): Promise<DrugLabel | null> {
+): Promise<LabelPage> {
   const term = buildSearchTerm(id)
 
   if (!term) {
-    return null
+    return EMPTY_PAGE
   }
 
-  const labels = await requestLabels(`id:"${term}"`, signal)
+  return requestLabels(`id:"${term}"`, signal)
+}
 
-  return labels[0] ?? null
+export async function fetchLabelsByUnii(
+  unii: string,
+  signal?: AbortSignal,
+): Promise<DrugLabel[]> {
+  const term = buildSearchTerm(unii)
+
+  if (!term) {
+    return []
+  }
+
+  const page = await requestLabels(`openfda.unii:"${term}"`, signal)
+
+  return page.labels
 }
