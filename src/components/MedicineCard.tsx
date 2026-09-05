@@ -6,6 +6,7 @@ import classes from './MedicineCard.module.css'
 
 type MedicineCardProps = {
   medicine: Medicine
+  query: string
 }
 
 type MetaRowProps = {
@@ -45,14 +46,17 @@ function productTypeBadge(productType: string | null) {
   )
 }
 
-export default function MedicineCard({ medicine }: MedicineCardProps) {
+export default function MedicineCard({ medicine, query }: MedicineCardProps) {
   const routes = formatList(medicine.routes)
   const substances = formatList(medicine.substances, 2)
 
   return (
     <Card
       component={Link}
-      to={`/medicine/${medicine.id}`}
+      to={{
+        pathname: `/medicine/${medicine.id}`,
+        search: query ? `?q=${encodeURIComponent(query)}` : '',
+      }}
       padding="md"
       className={classes.card}
     >

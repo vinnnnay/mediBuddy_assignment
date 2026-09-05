@@ -80,7 +80,7 @@ export default function SearchResults({
       </Text>
       <ResultsGrid>
         {state.medicines.map((medicine: Medicine) => (
-          <MedicineCard key={medicine.id} medicine={medicine} />
+          <MedicineCard key={medicine.id} medicine={medicine} query={query} />
         ))}
       </ResultsGrid>
     </Stack>

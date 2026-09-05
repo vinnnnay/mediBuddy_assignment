@@ -1,4 +1,4 @@
-import type { DrugLabel, OpenFdaFields } from './types'
+import type { DrugLabel, LabelSectionKey, OpenFdaFields } from './types'
 
 export type Medicine = {
   id: string
@@ -97,4 +97,59 @@ export function toMedicine(label: DrugLabel): Medicine {
 
 export function toMedicines(labels: DrugLabel[]): Medicine[] {
   return labels.map(toMedicine)
+}
+
+export type LabelSection = {
+  key: LabelSectionKey
+  title: string
+  body: string
+}
+
+export type MedicineDetail = Medicine & {
+  sections: LabelSection[]
+}
+
+const SECTION_TITLES: Array<[LabelSectionKey, string]> = [
+  ['description', 'Description'],
+  ['purpose', 'Purpose'],
+  ['indications_and_usage', 'Indications and usage'],
+  ['dosage_and_administration', 'Dosage and administration'],
+  ['active_ingredient', 'Active ingredient'],
+  ['inactive_ingredient', 'Inactive ingredients'],
+  ['warnings', 'Warnings'],
+  ['do_not_use', 'Do not use'],
+  ['ask_doctor', 'Ask a doctor'],
+  ['ask_doctor_or_pharmacist', 'Ask a doctor or pharmacist'],
+  ['when_using', 'When using this product'],
+  ['stop_use', 'Stop use and ask a doctor'],
+  ['pregnancy_or_breast_feeding', 'Pregnancy or breastfeeding'],
+  ['keep_out_of_reach_of_children', 'Keep out of reach of children'],
+  ['contraindications', 'Contraindications'],
+  ['adverse_reactions', 'Adverse reactions'],
+  ['storage_and_handling', 'Storage and handling'],
+]
+
+function sectionBody(field: string[] | undefined): string {
+  if (!field) {
+    return ''
+  }
+
+  return field
+    .filter((entry) => typeof entry === 'string' && entry.trim())
+    .map((entry) => entry.trim().replace(/[ \t]+/g, ' '))
+    .join('\n\n')
+}
+
+export function toMedicineDetail(label: DrugLabel): MedicineDetail {
+  const sections: LabelSection[] = []
+
+  for (const [key, title] of SECTION_TITLES) {
+    const body = sectionBody(label[key])
+
+    if (body) {
+      sections.push({ key, title, body })
+    }
+  }
+
+  return { ...toMedicine(label), sections }
 }
