@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, fetchLabelById } from '../api/client'
+import { ApiError, fetchLabelById, isAbortError } from '../api/client'
 import { toMedicineDetail } from '../api/medicine'
 import type { MedicineDetail } from '../api/medicine'
+import { createLruCache } from '../lib/lruCache'
 
 export type DetailStatus = 'loading' | 'success' | 'missing' | 'error'
 
@@ -17,6 +18,8 @@ const LOADING_STATE: DetailState = {
   error: null,
 }
 
+const cache = createLruCache<MedicineDetail | null>(20)
+
 export function useMedicineDetail(id: string | undefined) {
   const [state, setState] = useState<DetailState>(LOADING_STATE)
   const [attempt, setAttempt] = useState(0)
@@ -27,25 +30,42 @@ export function useMedicineDetail(id: string | undefined) {
       return
     }
 
-    let active = true
+    if (cache.has(id)) {
+      const cached = cache.get(id) ?? null
+
+      setState({
+        status: cached ? 'success' : 'missing',
+        medicine: cached,
+        error: null,
+      })
+      return
+    }
+
+    const controller = new AbortController()
 
     setState(LOADING_STATE)
 
-    fetchLabelById(id)
+    fetchLabelById(id, controller.signal)
       .then((label) => {
-        if (!active) {
+        const medicine = label ? toMedicineDetail(label) : null
+
+        cache.set(id, medicine)
+
+        if (controller.signal.aborted) {
           return
         }
+
         setState({
-          status: label ? 'success' : 'missing',
-          medicine: label ? toMedicineDetail(label) : null,
+          status: medicine ? 'success' : 'missing',
+          medicine,
           error: null,
         })
       })
       .catch((error: unknown) => {
-        if (!active) {
+        if (isAbortError(error) || controller.signal.aborted) {
           return
         }
+
         setState({
           status: 'error',
           medicine: null,
@@ -56,9 +76,7 @@ export function useMedicineDetail(id: string | undefined) {
         })
       })
 
-    return () => {
-      active = false
-    }
+    return () => controller.abort()
   }, [id, attempt])
 
   const retry = useCallback(() => {
