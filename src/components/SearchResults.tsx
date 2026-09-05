@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Button, Card, SimpleGrid, Skeleton, Stack, Text } from '@mantine/core'
 import type { Medicine } from '../api/medicine'
 import type { SearchState } from '../hooks/useMedicineSearch'
@@ -35,11 +36,7 @@ function CardSkeleton() {
   )
 }
 
-export default function SearchResults({
-  state,
-  query,
-  onRetry,
-}: SearchResultsProps) {
+function SearchResults({ state, query, onRetry }: SearchResultsProps) {
   if (state.status === 'loading') {
     return (
       <ResultsGrid>
@@ -86,3 +83,5 @@ export default function SearchResults({
     </Stack>
   )
 }
+
+export default memo(SearchResults)

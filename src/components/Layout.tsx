@@ -1,5 +1,6 @@
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Box, Container, Group, Text } from '@mantine/core'
 
 type LayoutProps = {
@@ -7,6 +8,12 @@ type LayoutProps = {
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   return (
     <Box mih="100vh">
       <Box

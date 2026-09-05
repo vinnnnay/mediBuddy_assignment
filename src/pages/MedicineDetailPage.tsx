@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   Accordion,
@@ -37,6 +38,16 @@ export default function MedicineDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const { state, retry } = useMedicineDetail(id)
+
+  const brandName = state.medicine?.brandName
+
+  useEffect(() => {
+    document.title = brandName ? `${brandName} - MediSearch` : 'MediSearch'
+
+    return () => {
+      document.title = 'MediSearch'
+    }
+  }, [brandName])
 
   const previousQuery = searchParams.get('q') ?? ''
   const backTo = previousQuery

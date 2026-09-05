@@ -53,7 +53,9 @@ export default function MedicineFacts({ medicine }: MedicineFactsProps) {
           <Text size="xs" c="dimmed" tt="uppercase" fw={600} lts={0.4}>
             {fact.label}
           </Text>
-          <Text size="sm">{fact.value}</Text>
+          <Text size="sm" style={{ overflowWrap: 'anywhere' }}>
+            {fact.value}
+          </Text>
         </Stack>
       ))}
     </SimpleGrid>
